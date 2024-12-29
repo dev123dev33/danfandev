@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess and Destroy Falling Objects</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        canvas {
+            border: 2px solid black;
+            background-color: white;
+        }
+
+        .score {
+            font-size: 24px;
+            color: black;
+            font-family: Arial, sans-serif;
+        }
+
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 15px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn:hover {
+            background-color: #45a049;
+        }
+
+        .game-over {
+            font-size: 36px;
+            font-weight: bold;
+            color: red;
+            margin-top: 20px;
+        }
+
+        .instruction {
+            font-size: 18px;
+            margin-top: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        #gameOverContainer {
+            display: none;
+            text-align: center;
+        }
+
+        .restart-btn {
+            margin-top: 20px;
+        }
+
+        /* Posisi Game Over di tengah */
+        .game-over-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="score">Score: <span id="score">0</span></div>
+    <div class="instruction">Click buttons to destroy objects (Red or Green)</div>
+    <div id="gameOverContainer" class="game-over-container">
+        <div class="game-over">Game Over! Final Score: <span id="finalScore"></span></div>
+        <button class="btn restart-btn" id="restartBtn">Restart Game</button>
+    </div>
+    <div class="button-container">
+        <button class="btn" id="redBtn">Destroy Red</button>
+        <button class="btn" id="greenBtn">Destroy Green</button>
+    </div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        let score = 0;
+        let gameOver = false;
+
+        // Karakter pemain
+        const player = {
+            x: 175,
+            y: 550,
+            width: 50,
+            height: 50,
+            color: "blue",
+            speed: 5
+        };
+
+        // Peluru
+        const bullets = [];
+        const maxBullets = 5; // Maksimal peluru yang bisa dikeluarkan
+
+        // Objek yang jatuh
+        const fallingObject = {
+            x: Math.random() * (canvas.width - 40) + 20,
+            y: 0,
+            width: 40,
+            height: 40,
+            color: getRandomColor()
+        };
+
+        const objectSpeed = 2;
+
+        // Fungsi untuk menggambar pemain
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        // Fungsi untuk menggambar peluru
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+
+        // Fungsi untuk memindahkan peluru
+        function moveBullets() {
+            bullets.forEach((bullet, index) => {
+                // Jika peluru melewati layar
+                if (bullet.y < 0) {
+                    bullets.splice(index, 1);
+                }
+
+                // Menggerakkan peluru untuk mengikuti objek yang jatuh
+                bullet.y -= bullet.speed;
+
+                // Jika peluru mengenai objek yang jatuh
+                if (bullet.x > fallingObject.x && bullet.x < fallingObject.x + fallingObject.width &&
+                    bullet.y > fallingObject.y && bullet.y < fallingObject.y + fallingObject.height) {
+                    // Jika peluru mengenai objek yang benar
+                    if ((bullet.color === "red" && fallingObject.color === "red") || 
+                        (bullet.color === "green" && fallingObject.color === "green")) {
+                        score += 10;
+                    } else {
+                        score -= 5;
+                    }
+                    resetFallingObject();
+                    bullets.splice(index, 1); // Hapus peluru setelah mengenai objek
+                }
+            });
+        }
+
+        // Fungsi untuk menggambar objek yang jatuh
+        function drawFallingObject() {
+            ctx.fillStyle = fallingObject.color;
+            ctx.fillRect(fallingObject.x, fallingObject.y, fallingObject.width, fallingObject.height);
+        }
+
+        // Fungsi untuk memindahkan objek yang jatuh
+        function moveFallingObject() {
+            fallingObject.y += objectSpeed;
+
+            // Jika objek jatuh keluar layar
+            if (fallingObject.y > canvas.height) {
+                gameOver = true;
+                showGameOver();
+            }
+        }
+
+        // Fungsi untuk memulai objek baru yang jatuh
+        function resetFallingObject() {
+            fallingObject.x = Math.random() * (canvas.width - 40) + 20;
+            fallingObject.y = 0;
+            fallingObject.color = getRandomColor(); // Warna acak hanya merah atau hijau
+        }
+
+        // Fungsi untuk mendapatkan warna acak (hanya merah dan hijau)
+        function getRandomColor() {
+            const colors = ["red", "green"];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Fungsi untuk menggambar skor
+        function drawScore() {
+            document.getElementById("score").innerText = score;
+        }
+
+        // Fungsi untuk menggambar seluruh elemen game
+        function draw() {
+            if (gameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawBullets();
+            drawFallingObject();
+            moveBullets();
+            moveFallingObject();
+            drawScore();
+        }
+
+        // Fungsi untuk menampilkan Game Over
+        function showGameOver() {
+            document.getElementById("finalScore").innerText = score;
+            document.getElementById("gameOverContainer").style.display = "block";
+        }
+
+        // Fungsi untuk memulai ulang game
+        document.getElementById("restartBtn").addEventListener("click", function () {
+            score = 0;
+            gameOver = false;
+            fallingObject.y = 0;
+            fallingObject.color = getRandomColor();
+            bullets.length = 0;
+            document.getElementById("gameOverContainer").style.display = "none";
+            gameLoop();
+        });
+
+        // Event listeners untuk tombol
+        document.getElementById("redBtn").addEventListener("click", function () {
+            if (bullets.length < maxBullets && fallingObject.color === "red") {
+                shootBullet("red");
+            }
+        });
+
+        document.getElementById("greenBtn").addEventListener("click", function () {
+            if (bullets.length < maxBullets && fallingObject.color === "green") {
+                shootBullet("green");
+            }
+        });
+
+        // Fungsi untuk menembak peluru
+        function shootBullet(color) {
+            const bullet = {
+                x: fallingObject.x + fallingObject.width / 2 - 5, // Peluru mengikuti objek yang jatuh
+                y: player.y,  // Posisi peluru di bawah pemain
+                width: 10,
+                height: 20,
+                color: color,
+                speed: 4
+            };
+            bullets.push(bullet);
+        }
+
+        // Mulai game
+        function gameLoop() {
+            draw();
+            if (!gameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
